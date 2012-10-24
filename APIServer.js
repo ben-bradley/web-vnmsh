@@ -97,7 +97,20 @@ www.createServer(function(req,res){
  // handle the vnmsh routes
  else if (aRoute[0] == 'vnmsh') {
   fs.exists(sVnmshPath+aRoute[1],function(exists) {
-   if (exists) { vnmshAction(res,aRoute[1],aRoute.slice(2),oUrl.query.format); }
+   if (exists) {
+    var	sAction = aRoute[1],
+    	aArgs = aRoute.slice(2),
+    	sFormat = oUrl.query.format,
+    	bSafeCommand = true;
+    for (var a in aArgs) {
+     if (aArgs[a].match(/^(\||&&|;|>+|<+)$/)) { // catch command insertion & redirection
+      sendOutput(res,'unsafe command detected');
+      bSafeCommand = false;
+     }
+     aArgs[a] = decodeURIComponent(aArgs[a]); // decode URI
+    }
+    if (bSafeCommand) { vnmshAction(res,sAction,aArgs,sFormat); }
+   }
    else {
     var sVnmshHelp = ''+
      'options are:\n'+
@@ -166,6 +179,7 @@ function vnmshConnect(res, fn) {
  fn to run an action in the vnmsh
 */
 function vnmshAction(res, sAction, aArgs, sFormat) {
+ console.log(sAction+' '+aArgs.join(' '));
  vnmshConnect(res, function() {
   var	chVnmshAction = child.spawn(sVnmshPath+sAction,aArgs),
 		sStdout = '',
